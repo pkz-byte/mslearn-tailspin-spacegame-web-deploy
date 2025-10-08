@@ -3,6 +3,7 @@ trigger:
 
 variables:
   buildConfiguration: 'Release'
+  releaseBranchName: 'release'
 
 stages:
 - stage: 'Build'
@@ -11,13 +12,13 @@ stages:
   - job: 'Build'
     displayName: 'Build job'
     pool:
-      vmImage: 'ubuntu-20.04'
+      vmImage: ubuntu-latest
       demands:
       - npm
 
     variables:
       wwwrootDir: 'Tailspin.SpaceGame.Web/wwwroot'
-      dotnetSdkVersion: '6.x'
+      dotnetSdkVersion: '8.x'
 
     steps:
     - task: UseDotNet@2
@@ -25,9 +26,15 @@ stages:
       inputs:
         version: '$(dotnetSdkVersion)'
 
+    - task: NodeTool@0
+      displayName: 'Use node.js'
+      inputs:
+        versionSpec: '18.x'
+
     - task: Npm@1
       displayName: 'Run npm install'
       inputs:
+        command: 'install'
         verbose: false
 
     - script: './node_modules/.bin/node-sass $(wwwrootDir) --output $(wwwrootDir)'
@@ -65,13 +72,19 @@ stages:
     - publish: '$(Build.ArtifactStagingDirectory)'
       artifact: drop
 
-- stage: 'Deploy'
-  displayName: 'Deploy the web application'
+- stage: 'Dev'
+  displayName: 'Deploy to the dev environment'
   dependsOn: Build
+  condition: |
+    and
+    (
+      succeeded(),
+      eq(variables['Build.SourceBranchName'], variables['releaseBranchName'])
+    )
   jobs:
   - deployment: Deploy
     pool:
-      vmImage: 'ubuntu-20.04'
+      vmImage: ubuntu-latest
     environment: dev
     variables:
     - group: Release
@@ -84,6 +97,6 @@ stages:
           - task: AzureWebApp@1
             displayName: 'Azure App Service Deploy: website'
             inputs:
-              azureSubscription: 'Resource Manager - Tailspin - Space Game'
-              appName: '$(WebAppName)'
+              azureSubscription: 'Azure Resource Manager - Tailspin - Space Game'
+              appName: 'tailspin-space-game-web-002'
               package: '$(Pipeline.Workspace)/drop/$(buildConfiguration)/*.zip'
