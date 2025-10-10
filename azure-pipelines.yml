@@ -155,3 +155,10 @@ stages:
               azureSubscription: 'Azure Resource Manager - Tailspin - Space Game'
               appName: 'tailspin-space-game-web-staging-002'
               package: '$(Pipeline.Workspace)/drop/$(buildConfiguration)/*.zip'
+          - task: AzureWebApp@1
+            displayName: 'Deploy to Slot: website'
+            inputs:
+              azureSubscription: 'Azure Resource Manager - Tailspin - Space Game'
+              appName: 'tailspin-space-game-web-staging-002'
+              slotName: uat
+              package: '$(Pipeline.Workspace)/drop/$(buildConfiguration)/*.zip'
